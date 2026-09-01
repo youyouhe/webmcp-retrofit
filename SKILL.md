@@ -7,6 +7,27 @@ description: Retrofit an existing web app with WebMCP (document.modelContext) �
 
 把一个现有 Web 应用改造成 AI agent 可直接操作。核心信条：**页面是给人看的导航，能力是给 agent 用的地图——工具的 execute 里调的是领域函数，不是 setState 模拟键盘**（准确说：不是合成 UI 事件）。
 
+## 预检：标准状态自检（每次改造前必做 —— 标准仍在迭代）
+
+WebMCP 是实验标准，下面的「已知状态快照」**会过期**。开始任何改造前，先花 10 分钟核对；事实漂移就先更新本 skill 再干活。
+
+**已知状态快照**（核实于 2026-09-01）：
+- API 入口：`document.modelContext`（早期草案为 `navigator.modelContext`，代码双探测）
+- 注册：`registerTool(tool, { signal })`，AbortSignal 注销；`execute` 必须是 async
+- Chrome 实现怪癖：`getTools()` 返回的 `inputSchema` 是 **JSON 字符串**而非对象
+- 启用：Origin Trial 阶段，`--enable-features=WebMCP` 或 `chrome://flags/#enable-webmcp-testing`；安全上下文（localhost/HTTPS）必需，LAN IP 直连无 API
+- 官方 MCP↔WebMCP 桥：**尚不存在**（仅 W3C Issue #25 设计讨论）→ 自建桥（本仓库 `mcp-bridge/`）是当前正解
+- 规范仓库 webmachinelearning/webmcp 为纯规范文本，无参考实现
+
+**核对清单**（按序，可用 WebSearch/WebFetch）：
+1. 规范仓库的 `implementation-status.md` + 近 30 天 commits/issues——API 面有没有变
+2. Chrome 文档 `developer.chrome.com/docs/ai/webmcp`——入口/签名/flag 是否漂移
+3. chromestatus feature `5117755740913664`——Origin Trial / 正式发布进度
+4. 搜「official WebMCP bridge / SDK」（webmcp-types、usewebmcp、官方桥）——**若官方桥落地，优先采用并考虑淘汰本仓库 mcp-bridge**
+5. 消费端动态（ChatGPT 内置浏览器、chrome-devtools-mcp）的原生 WebMCP 支持
+
+**自我进化规则**：任何一条与快照不符 → 当场更新本 skill 的快照与受影响章节 → 同步提交到 GitHub 仓库（`~/webmcp-retrofit`，或 `git pull` 后改再 push）→ 然后才开始改造。**skill 是活文档，不是刻在石头上的。**
+
 ## 0. 适配判断（先做，5 分钟）
 
 | 应用形态 | 结论 |
@@ -92,7 +113,7 @@ puppeteer-core attach `http://127.0.0.1:9222`，测试矩阵：
 
 ## 6. 消费端（agent 侧）
 
-- 通用 stdio 桥：本仓库 `mcp-bridge/`（页面无关，代理任意 WebMCP 注册表）。
+- 通用 stdio 桥：StoryFlow 仓库 `mcp-bridge/`（页面无关，代理任意 WebMCP 注册表）。
   `claude mcp add <站点别名> -e WEBMCP_PAGE_URL=localhost:PORT -- node /path/mcp-bridge/index.mjs`
 - 已知兼容坑：Chrome `getTools()` 的 `inputSchema` 返回 **JSON 字符串**，桥里要归一化为对象。
 - 每个 WebMCP 站点注册一个桥实例（`*` 模式多站点会抢错页）。

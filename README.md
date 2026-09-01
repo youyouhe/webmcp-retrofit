@@ -19,7 +19,7 @@ WebMCP 的规范只定义了机制（`registerTool` 的形状），没告诉你�
 ## What's Inside
 
 ```
-SKILL.md                    方法论（7 阶段 + 验收清单 + 踩坑实录）
+SKILL.md                    方法论（预检 + 7 阶段 + 验收清单 + 踩坑实录，含标准状态快照与自我进化规则）
 mcp-bridge/                 通用 stdio MCP 桥（页面无关）
   ├─ index.mjs              代理任意 WebMCP 页面的注册表 → tools/list 原生带 schema
   ├─ test-client.mjs        端到端回归测试
@@ -50,7 +50,7 @@ claude mcp add myapp -e WEBMCP_PAGE_URL=localhost:5173 -- node ./mcp-bridge/inde
 七阶段改造流程：
 
 ```
-0 适配判断 → 1 能力盘点 → 2 状态桥接 → 3 工具设计
+预检（标准自检+官方实现扫描）→ 0 适配判断 → 1 能力盘点 → 2 状态桥接 → 3 工具设计
 → 4 注册与生命周期 → 5 测试夹具 → 6 消费端 → 7 验收清单
 ```
 
