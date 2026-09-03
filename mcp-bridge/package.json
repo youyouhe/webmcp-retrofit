@@ -1,6 +1,6 @@
 {
   "name": "webmcp-retrofit-bridge",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Generic stdio MCP bridge: exposes whatever WebMCP tools a page registers on document.modelContext to MCP clients (Claude Code / Cursor) over CDP. Page-agnostic, no hardcoded tool list.",
   "type": "module",
   "bin": {

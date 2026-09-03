@@ -128,18 +128,18 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args } = req.params;
   try {
     const page = await getTargetPage();
-    const result = await page.evaluate(async (toolName, args) => {
+    const result = await page.evaluate(async (toolName, argsJson) => {
       const mc = document.modelContext;
       if (!mc) return JSON.stringify({ ok: false, error: 'WebMCP unavailable on this page.' });
       const tools = await mc.getTools();
       const t = tools.find(x => x.name === toolName);
       if (!t) return JSON.stringify({ ok: false, error: `Unknown tool: ${toolName}. Re-list tools — the page registry may have changed.` });
-      // 注意：args 必须以“对象”传入 executeTool；序列化成字符串会让 Chrome 抛
-      // “UnknownError: operation failed for an unknown transient reason”，
-      // 带参工具(如 run_probe / set_basic_info / navigate)会全部挂。
-      const out = await mc.executeTool(t, args ?? {});
+      // 实测(Chrome 152/155)：executeTool 第 2 参必须是“参数对象的 JSON 字符串”；
+      // 传对象会报 “Failed to parse input arguments”。每次调用都重新 getTools()，
+      // 因为页面工具注册可能在执行后刷新（复用旧 RegisteredTool 会 “Tool not found”）。
+      const out = await mc.executeTool(t, argsJson);
       return typeof out === 'string' ? out : JSON.stringify(out);
-    }, name, args ?? {});
+    }, name, JSON.stringify(args ?? {}));
     return { content: [{ type: 'text', text: result }] };
   } catch (e) {
     return {
