@@ -1,9 +1,33 @@
 {
-  "name": "storyflow-webmcp-bridge",
+  "name": "webmcp-retrofit-bridge",
   "version": "0.1.0",
-  "private": true,
+  "description": "Generic stdio MCP bridge: exposes whatever WebMCP tools a page registers on document.modelContext to MCP clients (Claude Code / Cursor) over CDP. Page-agnostic, no hardcoded tool list.",
   "type": "module",
-  "description": "stdio MCP server proxying StoryFlow's in-page WebMCP tools (document.modelContext) over CDP. Tools appear natively in tools/list with their page-defined schemas.",
+  "bin": {
+    "webmcp-retrofit-bridge": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/youyouhe/webmcp-retrofit.git"
+  },
+  "keywords": [
+    "webmcp",
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "cursor",
+    "cdp",
+    "puppeteer",
+    "bridge"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "puppeteer-core": "^24.0.0"
