@@ -128,14 +128,18 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args } = req.params;
   try {
     const page = await getTargetPage();
-    const result = await page.evaluate(async (toolName, argsJson) => {
+    const result = await page.evaluate(async (toolName, args) => {
       const mc = document.modelContext;
       if (!mc) return JSON.stringify({ ok: false, error: 'WebMCP unavailable on this page.' });
       const tools = await mc.getTools();
       const t = tools.find(x => x.name === toolName);
       if (!t) return JSON.stringify({ ok: false, error: `Unknown tool: ${toolName}. Re-list tools — the page registry may have changed.` });
-      return await mc.executeTool(t, argsJson);
-    }, name, JSON.stringify(args ?? {}));
+      // 注意：args 必须以“对象”传入 executeTool；序列化成字符串会让 Chrome 抛
+      // “UnknownError: operation failed for an unknown transient reason”，
+      // 带参工具(如 run_probe / set_basic_info / navigate)会全部挂。
+      const out = await mc.executeTool(t, args ?? {});
+      return typeof out === 'string' ? out : JSON.stringify(out);
+    }, name, args ?? {});
     return { content: [{ type: 'text', text: result }] };
   } catch (e) {
     return {
