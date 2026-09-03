@@ -120,6 +120,20 @@ puppeteer-core attach `http://127.0.0.1:9222`，测试矩阵：
 - 在项目 CLAUDE.md 写 agent 操作指南（启动脚本、调用模式、故障判断）。
 - **两个世界陷阱**：agent 附着的浏览器 ≠ 用户眼前的浏览器，localStorage 各自独立。要让 agent 操作用户的真实数据，两者必须同一个浏览器实例。
 
+**跨机桥接（远程 agent → 用户本机 Chrome）——反向 SSH 隧道模式**，2026-09-03 实战全通：
+```
+用户机: chrome --enable-features=WebMCP --remote-debugging-port=9222 \
+              --user-data-dir=<专用目录>  http://localhost:<app>
+用户机: ssh -N -o ExitOnForwardFailure=yes -R <远端口>:127.0.0.1:9222 <agent主机>
+agent 机: 桥的 WEBMCP_BROWSER_URL=http://127.0.0.1:<远端口>
+```
+四个实测坑（每个都真实炸过）：
+1. **VS Code Remote-SSH 自动端口转发**会把远端的 9222 转到用户本地同端口，伪装成"本地 CDP"——先在端口面板关掉并设 Never Forward。
+2. **Chrome 136+ 在默认用户目录下静默忽略 --remote-debugging-port**（安全策略）——必须加 `--user-data-dir` 指向专用目录；注意新 profile 的 localStorage 是空世界，数据要迁移（导出/导入）。
+3. **僵尸 ssh 会话占住 -R 端口**，新会话绑不上只打一行小警告——`ExitOnForwardFailure=yes` 让失败大声报错；被误杀的远端任务可改 localStorage 后重载页面救回。
+4. **Windows 的 localhost 优先解析 ::1，Chrome CDP 只听 127.0.0.1，ssh 代拨不回退**——-R 目标显式写 `127.0.0.1` 而非 localhost。
+另：MCP SDK 的 StdioClientTransport 给子进程净化环境（PATH/HOME 白名单）——传环境变量必须显式 `env: {...process.env}`；MCP 客户端默认 60s 请求超时，长 AI 调用要逐请求 `timeout`；puppeteer connect 默认 protocolTimeout 30s，长调用要调大。
+
 ## 7. 验收清单
 
 - [ ] 工具 execute 调的是领域函数/数据层，无裸 fetch、无合成 UI 事件
