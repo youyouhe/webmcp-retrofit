@@ -43,7 +43,7 @@ cd mcp-bridge && npm install
 claude mcp add myapp -e WEBMCP_PAGE_URL=localhost:5173 -- node ./mcp-bridge/index.mjs
 ```
 
-环境变量：`WEBMCP_BROWSER_URL`（默认 `http://127.0.0.1:9222`）、`WEBMCP_PAGE_URL`（URL 子串匹配，`*` 为自动发现）、`WEBMCP_SERVER_NAME`。
+环境变量：`WEBMCP_BROWSER_URL`（默认 `http://127.0.0.1:9222`）、`WEBMCP_PAGE_URL`（URL 子串匹配，`*` 为自动发现）、`WEBMCP_SERVER_NAME`、`WEBMCP_PROTOCOL_TIMEOUT_MS`、`WEBMCP_TOOL_TIMEOUT_MS`（详见 `mcp-bridge/README.md`）。
 
 ### 方法论 Skill
 

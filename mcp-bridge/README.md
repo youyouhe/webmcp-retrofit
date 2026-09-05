@@ -39,7 +39,17 @@ claude mcp add <名字> \
 | `WEBMCP_BROWSER_URL` | `http://127.0.0.1:9222` | CDP 端点 |
 | `WEBMCP_PAGE_URL` | `*` | 页面 URL 子串匹配；`*`=自动发现 |
 | `WEBMCP_SERVER_NAME` | `webmcp-bridge` | MCP 服务器名 |
+| `WEBMCP_PROTOCOL_TIMEOUT_MS` | `180000` | CDP 协议超时（毫秒） |
+| `WEBMCP_TOOL_TIMEOUT_MS` | `0` | tools/call 响应上限（毫秒）；`0`=不设上限。超时只提前回客户端，真正的页面执行仍在队列里跑完，不会与下一个调用交错 |
 
 ## 说明
-- 只读桥，不伪造工具清单；schema 由页面自身提供。
+- 只读桥，不伪造工具清单；schema/annotations 由页面自身提供（`readOnlyHint`/`destructiveHint` 等会原样转发给 MCP 客户端）。
 - 桥需要目标页**保持打开**（工具随页面存活）——适合人机协作，不适合无人值守 cron（那应走 REST/MCP server）。
+- 兼容 Chrome 146–149（`navigator.modelContext`）与 150+（`document.modelContext`），双入口自动探测。
+- 桥断开（MCP 客户端退出 / Ctrl-C）时只 `disconnect()` 自己那条 CDP 连接并退出，**不会关掉你手动开着的 Chrome**；无残留僵尸进程。
+- 同一时刻页面上只有一个操作（tools/list 与 tools/call 串行），避免并发 evaluate 交错读写应用状态。
+
+## 安全
+- **CDP 9222 是无鉴权的**：任何能连到该端口的进程都能驱动整个浏览器（读 cookie、以你身份操作页面）。默认只监听 `127.0.0.1`——**不要**把 9222 暴露到非本机网卡。
+- 跨机桥接（反向 SSH 隧道）时，能把 9222 端口转发出去的主机即拥有你浏览器的完全控制权，请只在信任的 agent 主机上这么做。
+- `*` 自动发现会挑中"第一个暴露 WebMCP 的页面"——如果你同时开着多个站点，优先用 `WEBMCP_PAGE_URL` 钉死目标，避免 agent 操作错页面。桥每次解析到目标都会在 stderr 打印实际页面 URL，留意它。

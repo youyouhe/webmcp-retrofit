@@ -1,7 +1,15 @@
-/** End-to-end test of the bridge as a real MCP client would use it:
- *  spawns the stdio server, lists tools (should surface the page's 7
- *  storyflow_* tools with schemas), calls one read tool and one write tool,
- *  verifies persistence. Run: node test-client.mjs  (WebMCP browser up.) */
+/** End-to-end smoke test of the bridge as a real MCP client would use it:
+ *  spawns the stdio server and lists tools (should surface whatever the target
+ *  page registers). If WEBMCP_TEST_TOOL is set, calls that tool and prints the
+ *  raw result — page-agnostic, no hardcoded tool names.
+ *
+ * Run (a WebMCP browser must be up):
+ *   node test-client.mjs
+ *   WEBMCP_TEST_TOOL=storyflow_get_app_info node test-client.mjs
+ *   WEBMCP_TEST_TOOL=storyflow_append_blocks \
+ *     WEBMCP_TEST_ARGS='{"blocks":[{"type":"TRANSITION","content":"CUT TO:"}]}' \
+ *     node test-client.mjs
+ */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -16,26 +24,31 @@ console.log('=== tools/list ===');
 const { tools } = await client.listTools();
 for (const t of tools) {
   const props = Object.keys(t.inputSchema?.properties ?? {});
-  console.log(`- ${t.name}(${props.join(', ')})`);
+  const hint = t.annotations?.readOnlyHint ? 'read-only'
+    : t.annotations?.destructiveHint ? 'destructive' : 'rw';
+  console.log(`- ${t.name}(${props.join(', ')}) [${hint}]`);
+}
+if (tools.length === 0) {
+  console.error('No WebMCP tools on the target page.');
+  process.exit(1);
 }
 
-console.log('\n=== call storyflow_get_app_info ===');
-const info = await client.callTool({ name: 'storyflow_get_app_info', arguments: {} });
-console.log(info.content[0].text);
-
-console.log('\n=== call storyflow_append_blocks (write via bridge) ===');
-const before = JSON.parse((await client.callTool({ name: 'storyflow_get_blocks', arguments: { from: 0, to: 999 } })).content[0].text);
-const wrote = await client.callTool({
-  name: 'storyflow_append_blocks',
-  arguments: { blocks: [{ type: 'TRANSITION', content: 'CUT TO:' }] },
-});
-console.log(wrote.content[0].text);
-const after = JSON.parse((await client.callTool({ name: 'storyflow_get_blocks', arguments: { from: 0, to: 999 } })).content[0].text);
-console.log(`blocks: ${before.total} -> ${after.total}, last = ${after.blocks.at(-1).type}: ${after.blocks.at(-1).content}`);
-
-console.log('\n=== call storyflow_generate_video_prompt (expect graceful error on non-shot block) ===');
-const p = await client.callTool({ name: 'storyflow_generate_video_prompt', arguments: { blockIndex: 0, target: 'seedance' } });
-console.log(p.content[0].text);
+const toolName = process.env.WEBMCP_TEST_TOOL;
+if (toolName) {
+  if (!tools.some((t) => t.name === toolName)) {
+    console.error(`WEBMCP_TEST_TOOL=${toolName} is not in the registry above.`);
+    process.exit(1);
+  }
+  let args = {};
+  const rawArgs = process.env.WEBMCP_TEST_ARGS;
+  if (rawArgs) {
+    try { args = JSON.parse(rawArgs); }
+    catch { console.error('WEBMCP_TEST_ARGS must be valid JSON.'); process.exit(1); }
+  }
+  console.log(`\n=== call ${toolName} ===`);
+  const res = await client.callTool({ name: toolName, arguments: args });
+  console.log(res.content?.[0]?.text ?? JSON.stringify(res));
+}
 
 await client.close();
 console.log('\nBRIDGE TEST PASSED');
